@@ -26,3 +26,5 @@ I build end-to-end data systems — pipelines, analytics, and machine learning t
 **Certifications:** [IBM Data Science Professional](https://www.credly.com/badges/1c045c4e-4493-435a-8029-782cd961988c/public_url) · [IBM ML Specialist – Advanced](https://www.credly.com/badges/fae85859-f892-4376-b864-813f2121650e/public_url) · [Google Data Analytics](https://www.credly.com/badges/45e54b43-f18f-47f0-9a5e-965571748030/public_url) · [AWS Cloud Practitioner](https://www.credly.com/badges/b6bad1eb-1fa3-4947-98bb-692045b56d7f/public_url)
 
 📫 [madhusiddharths1@outlook.com](mailto:madhusiddharths1@outlook.com) · [LinkedIn](https://www.linkedin.com/in/madhu-siddharth-suthagar/) · [Portfolio](https://www.madhusiddharths.com) · More: [Traffic-Prediction](https://github.com/madhusiddharths/Traffic-Prediction), [Image Retrieval](https://github.com/madhusiddharths/image_retrieval)
+
+<!-- profile readme -->
