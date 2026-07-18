@@ -68,8 +68,11 @@
 ## 📊 GitHub stats
 
 <p align="center">
-  <img height="180" src="https://github-readme-stats.vercel.app/api?username=madhusiddharths&show_icons=true&bg_color=0d1117&title_color=00ff9c&icon_color=00e5ff&text_color=c9d1d9&border_color=00ff9c" alt="GitHub stats" />
   <img height="180" src="https://streak-stats.demolab.com/?user=madhusiddharths&background=0d1117&border=00ff9c&ring=00ff9c&fire=00e5ff&stroke=00e5ff&currStreakNum=00ff9c&currStreakLabel=00e5ff&sideNums=c9d1d9&sideLabels=c9d1d9&dates=8b949e" alt="GitHub streak" />
+</p>
+
+<p align="center">
+  <img width="95%" src="https://github-readme-activity-graph.vercel.app/graph?username=madhusiddharths&bg_color=0d1117&color=00e5ff&line=00ff9c&point=00e5ff&area=true&area_color=00ff9c&hide_border=false&custom_title=Contribution%20activity" alt="Contribution activity graph" />
 </p>
 
 <img src="assets/divider.svg" width="100%" alt="" />
