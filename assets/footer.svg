@@ -1,0 +1,24 @@
+<svg width="860" height="110" viewBox="0 0 860 110" xmlns="http://www.w3.org/2000/svg" role="presentation" aria-hidden="true">
+  <style>
+    .pulse { animation: travel 4.5s linear infinite; }
+    @keyframes travel {
+      from { stroke-dashoffset: 1720; }
+      to { stroke-dashoffset: 0; }
+    }
+  </style>
+  <defs>
+    <filter id="fg" x="-20%" y="-60%" width="140%" height="220%">
+      <feGaussianBlur stdDeviation="2.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect x="1" y="1" width="858" height="108" rx="10" fill="#0d1117" stroke="#00ff9c" stroke-opacity="0.25"/>
+
+  <path d="M20 55 H190 l14 0 l7 -20 l10 36 l7 -24 l6 8 H420 l8 -12 l9 24 l7 -12 H640 l6 -16 l9 30 l6 -18 l5 4 H840"
+        fill="none" stroke="#00ff9c" stroke-opacity="0.15" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+
+  <path class="pulse" d="M20 55 H190 l14 0 l7 -20 l10 36 l7 -24 l6 8 H420 l8 -12 l9 24 l7 -12 H640 l6 -16 l9 30 l6 -18 l5 4 H840"
+        fill="none" stroke="#00ff9c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"
+        stroke-dasharray="220 1500" filter="url(#fg)"/>
+</svg>

@@ -1,0 +1,48 @@
+<svg width="860" height="86" viewBox="0 0 860 86" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="I build end-to-end data systems — pipelines, analytics, and machine learning that turn large, messy datasets into decisions.">
+  <style>
+    text { font-family: 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 15px; }
+    .p { fill: #00e5ff; }
+    .t { fill: #e6edf3; }
+    .cursorblink { fill: #00ff9c; animation: blink 1.1s steps(2, start) infinite; }
+    @keyframes blink { to { opacity: 0; } }
+
+    .clip1 { animation: type1 12s linear infinite; }
+    @keyframes type1 {
+      0%, 3% { width: 0; animation-timing-function: steps(35, end); }
+      18%, 95% { width: 330px; }
+      100% { width: 0; }
+    }
+    .clip2 { animation: type2 12s linear infinite; }
+    @keyframes type2 {
+      0%, 20% { width: 0; animation-timing-function: steps(90, end); }
+      50%, 95% { width: 822px; }
+      100% { width: 0; }
+    }
+    .cur1 { animation: cur1move 12s linear infinite; }
+    @keyframes cur1move {
+      0%, 3% { transform: translateX(0); opacity: 1; animation-timing-function: steps(35, end); }
+      18% { transform: translateX(315px); opacity: 1; }
+      19.9% { transform: translateX(315px); opacity: 1; }
+      20%, 100% { transform: translateX(315px); opacity: 0; }
+    }
+    .cur2 { animation: cur2move 12s linear infinite; }
+    @keyframes cur2move {
+      0%, 19.9% { transform: translateX(0); opacity: 0; }
+      20% { transform: translateX(0); opacity: 1; animation-timing-function: steps(90, end); }
+      50%, 95% { transform: translateX(810px); opacity: 1; }
+      96%, 100% { transform: translateX(810px); opacity: 0; }
+    }
+  </style>
+  <defs>
+    <clipPath id="c1"><rect class="clip1" x="20" y="10" width="0" height="30"/></clipPath>
+    <clipPath id="c2"><rect class="clip2" x="20" y="40" width="0" height="34"/></clipPath>
+  </defs>
+
+  <rect x="1" y="1" width="858" height="84" rx="10" fill="#0d1117" stroke="#00ff9c" stroke-opacity="0.25"/>
+
+  <text x="20" y="34" clip-path="url(#c1)"><tspan class="p">$ </tspan><tspan class="t">I build end-to-end data systems —</tspan></text>
+  <text x="20" y="62" clip-path="url(#c2)"><tspan class="t">pipelines, analytics, and machine learning that turn large, messy datasets into decisions.</tspan></text>
+
+  <g class="cur1"><rect class="cursorblink" x="20" y="21" width="9" height="17"/></g>
+  <g class="cur2"><rect class="cursorblink" x="20" y="49" width="9" height="17"/></g>
+</svg>
