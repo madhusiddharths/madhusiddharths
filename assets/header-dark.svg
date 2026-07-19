@@ -1,0 +1,29 @@
+<svg width="1000" height="200" viewBox="0 0 1000 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Madhu Siddharth Suthagar — Data Scientist and Data Analyst — Chicago, IL — M.S. in Data Science, Illinois Institute of Technology (May 2026), GPA 3.77">
+  <style>
+    .role { font: 600 13px 'Helvetica Neue', Helvetica, 'Segoe UI', Arial, sans-serif; letter-spacing: 3.5px; fill: #58a6ff; }
+    .name { font: 700 46px Georgia, 'Iowan Old Style', 'Times New Roman', serif; fill: #e6edf3; }
+    .meta { font: italic 15px Georgia, 'Iowan Old Style', 'Times New Roman', serif; fill: #9198a1; }
+  </style>
+
+  <rect x="2" y="26" width="56" height="3" fill="#58a6ff"/>
+  <text x="2" y="62" class="role">DATA SCIENTIST&#160;&#160;&#183;&#160;&#160;DATA ANALYST</text>
+  <text x="0" y="116" class="name">Madhu Siddharth Suthagar</text>
+  <text x="2" y="150" class="meta">Chicago, IL&#160;&#160;&#183;&#160;&#160;M.S. in Data Science, Illinois Institute of Technology (May 2026)&#160;&#160;&#183;&#160;&#160;GPA 3.77</text>
+
+  <line x1="2" y1="180" x2="998" y2="180" stroke="#3d444d" stroke-width="1"/>
+
+  <g>
+    <polyline points="720,128 756,100 792,112 828,76 864,90 900,58 936,66 972,34"
+      fill="none" stroke="#58a6ff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.6"/>
+    <g fill="#58a6ff" opacity="0.65">
+      <circle cx="720" cy="128" r="3"/>
+      <circle cx="756" cy="100" r="3"/>
+      <circle cx="792" cy="112" r="3"/>
+      <circle cx="828" cy="76" r="3"/>
+      <circle cx="864" cy="90" r="3"/>
+      <circle cx="900" cy="58" r="3"/>
+      <circle cx="936" cy="66" r="3"/>
+    </g>
+    <circle cx="972" cy="34" r="4.5" fill="#58a6ff" opacity="0.95"/>
+  </g>
+</svg>
