@@ -1,29 +1,64 @@
-<svg width="1000" height="200" viewBox="0 0 1000 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Madhu Siddharth Suthagar — Data Scientist and Data Analyst — Chicago, IL — M.S. in Data Science, Illinois Institute of Technology (May 2026), GPA 3.77">
-  <style>
-    .role { font: 600 13px 'Helvetica Neue', Helvetica, 'Segoe UI', Arial, sans-serif; letter-spacing: 3.5px; fill: #0b5cad; }
-    .name { font: 700 46px Georgia, 'Iowan Old Style', 'Times New Roman', serif; fill: #1f2328; }
-    .meta { font: italic 15px Georgia, 'Iowan Old Style', 'Times New Roman', serif; fill: #59636e; }
-  </style>
+<svg width="1000" height="186" viewBox="0 0 1000 186" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Madhu Siddharth Suthagar — Data Scientist and Data Analyst — Chicago, IL — M.S. in Data Science, Illinois Institute of Technology (May 2026), GPA 3.77">
+  <defs>
+    <pattern id="grid-l" width="38" height="38" patternUnits="userSpaceOnUse">
+      <path d="M38 0H0V38" fill="none" stroke="#111110" stroke-opacity="0.05" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="fade-l" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.74" stop-color="#000000"/>
+    </linearGradient>
+    <mask id="mask-l">
+      <rect width="1000" height="186" fill="url(#fade-l)"/>
+    </mask>
+    <clipPath id="clip-l">
+      <rect x="0.75" y="0.75" width="998.5" height="184.5" rx="16"/>
+    </clipPath>
+    <style>
+      .name-l { font: 700 44px 'Helvetica Neue','Segoe UI',Helvetica,Arial,sans-serif; letter-spacing: -1.3px; fill: #111110; }
+      .eye-l  { font: 600 12.5px 'SFMono-Regular','SF Mono','Menlo','Consolas',monospace; letter-spacing: 3px; }
+      .meta-l { font: 400 14px 'Helvetica Neue','Segoe UI',Helvetica,Arial,sans-serif; fill: #56554e; }
+      .mark-l { font: 700 15px 'SFMono-Regular','SF Mono','Menlo','Consolas',monospace; letter-spacing: 0.5px; fill: #f6f5f1; }
+    </style>
+  </defs>
 
-  <rect x="2" y="26" width="56" height="3" fill="#0b5cad"/>
-  <text x="2" y="62" class="role">DATA SCIENTIST&#160;&#160;&#183;&#160;&#160;DATA ANALYST</text>
-  <text x="0" y="116" class="name">Madhu Siddharth Suthagar</text>
-  <text x="2" y="150" class="meta">Chicago, IL&#160;&#160;&#183;&#160;&#160;M.S. in Data Science, Illinois Institute of Technology (May 2026)&#160;&#160;&#183;&#160;&#160;GPA 3.77</text>
+  <!-- paper canvas -->
+  <rect x="0.75" y="0.75" width="998.5" height="184.5" rx="16" fill="#f6f5f1"/>
 
-  <line x1="2" y1="180" x2="998" y2="180" stroke="#d0d7de" stroke-width="1"/>
+  <g clip-path="url(#clip-l)">
+    <!-- graph-paper grid, faded from the top -->
+    <rect width="1000" height="186" fill="url(#grid-l)" mask="url(#mask-l)"/>
 
-  <g>
-    <polyline points="720,128 756,100 792,112 828,76 864,90 900,58 936,66 972,34"
-      fill="none" stroke="#0b5cad" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.55"/>
-    <g fill="#0b5cad" opacity="0.6">
-      <circle cx="720" cy="128" r="3"/>
-      <circle cx="756" cy="100" r="3"/>
-      <circle cx="792" cy="112" r="3"/>
-      <circle cx="828" cy="76" r="3"/>
-      <circle cx="864" cy="90" r="3"/>
-      <circle cx="900" cy="58" r="3"/>
-      <circle cx="936" cy="66" r="3"/>
+    <!-- trend-line plot -->
+    <g>
+      <line x1="762" y1="114" x2="986" y2="114" stroke="#111110" stroke-opacity="0.11" stroke-width="1"/>
+      <polyline points="770,106 804,110 838,80 872,92 906,62 940,70 974,42"
+        fill="none" stroke="#5b3df5" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round" opacity="0.55"/>
+      <g fill="#5b3df5" fill-opacity="0.6">
+        <circle cx="770" cy="106" r="2.8"/>
+        <circle cx="804" cy="110" r="2.8"/>
+        <circle cx="838" cy="80" r="2.8"/>
+        <circle cx="872" cy="92" r="2.8"/>
+        <circle cx="906" cy="62" r="2.8"/>
+        <circle cx="940" cy="70" r="2.8"/>
+      </g>
+      <circle cx="974" cy="42" r="8" fill="#5b3df5" opacity="0.14"/>
+      <circle cx="974" cy="42" r="4.25" fill="#5b3df5"/>
     </g>
-    <circle cx="972" cy="34" r="4.5" fill="#0b5cad" opacity="0.9"/>
   </g>
+
+  <!-- monogram -->
+  <rect x="44" y="26" width="36" height="36" rx="9" fill="#111110"/>
+  <text x="62" y="49.5" text-anchor="middle" class="mark-l">MS</text>
+
+  <!-- eyebrow -->
+  <text x="96" y="49" class="eye-l"><tspan fill="#56554e">DATA SCIENTIST</tspan><tspan fill="#5b3df5">&#160;&#160;&#183;&#160;&#160;</tspan><tspan fill="#56554e">DATA ANALYST</tspan></text>
+
+  <!-- name -->
+  <text x="43" y="108" class="name-l">Madhu Siddharth Suthagar</text>
+
+  <!-- meta -->
+  <text x="44" y="145" class="meta-l"><tspan fill="#56554e">Chicago, IL</tspan><tspan fill="#5b3df5" fill-opacity="0.85">&#160;&#160;&#183;&#160;&#160;</tspan><tspan fill="#56554e">M.S. in Data Science, Illinois Institute of Technology (May 2026)</tspan><tspan fill="#5b3df5" fill-opacity="0.85">&#160;&#160;&#183;&#160;&#160;</tspan><tspan fill="#56554e">GPA 3.77</tspan></text>
+
+  <!-- frame -->
+  <rect x="0.75" y="0.75" width="998.5" height="184.5" rx="16" fill="none" stroke="#111110" stroke-opacity="0.12" stroke-width="1"/>
 </svg>
