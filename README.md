@@ -14,7 +14,7 @@ I build end-to-end data systems — pipelines, analytics, and machine learning t
 ## Highlights
 
 - **First-author, IEEE ICAIC 2026** — [Hybrid Federated Learning for IoT Intrusion Detection](https://ieeexplore.ieee.org/document/11395795): 97.98% accuracy on 2.4M samples, with LoRA adapters cutting communication payload by 89.5%.
-- **Data Science Co-op, Labelmaster** — recovered **$40M+ in mis-attributed sales** by fixing the merge defect behind 4,792 false $0 records; mapped 26,290 sites across 178 corporate families for white-space analysis.
+- **Data Science Co-op, Labelmaster** — Identified **$40M+** in projected white-space opportunity across 26,290 sites and 178 corporate families; resolved an address-merge defect behind 4,792 false $0 records and rebuilt site-level sales attribution.
 - **2nd place, Oracle Datathon 2026** (AI & Analytics Summit) and **patent holder** — [SATURDAE](https://github.com/madhusiddharths/SATURDAE), a voice-driven floor-plan designer (Indian Patent No. 202341038832 A).
 
 <picture>
