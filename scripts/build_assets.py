@@ -353,12 +353,10 @@ def data_uri(img: Image.Image, fmt="JPEG", quality=80) -> str:
 
 
 def thumb(name: str, w: int, h: int) -> str:
-    """Card thumbnail with the site's filter: grayscale(1) contrast(1.08) brightness(.62)."""
+    """Card thumbnail in colour; grayscale/brightness come from the animated SVG filter (hover_glow)."""
     img = Image.open(PORTFOLIO / "public/img/project_img" / name).convert("RGB")
     img = ImageOps.fit(img, (w * 2, h * 2), Image.LANCZOS)
-    img = ImageOps.grayscale(img).convert("RGB")
     img = ImageEnhance.Contrast(img).enhance(1.08)
-    img = ImageEnhance.Brightness(img).enhance(0.62)
     return data_uri(img, quality=72)
 
 
@@ -441,14 +439,114 @@ def agent_cursor(svg: SVG, name, color, path, dur=9, begin=0) -> None:
 # --------------------------------------------------------------------------
 # panels
 # --------------------------------------------------------------------------
+WIRE, WIRE_LINE = "#4de1ff", "rgba(77,225,255,0.55)"
+
+
+class Swarm:
+    """Replays the portfolio's build on load: Planners frame every block as a
+    cyan wireframe, Coders write each block in (a left-to-right reveal) while
+    their cursors hop between blocks, then the page settles to its static
+    render. SMIL only, so it runs inside GitHub's <img>; it plays once per
+    page load and freezes on the finished page."""
+
+    PLAN0, PLAN_STEP = 0.25, 0.09     # planners frame blocks
+    FILL0, FILL_STEP = 1.9, 0.38      # coders write blocks
+    WRITE = 0.55                      # seconds a reveal takes
+    SLACK = 140                       # the reveal runs past the wire box so long lines never clip
+    CODERS = [("Coder·1", AGENT["coder"]), ("Coder·2", AGENT["coder2"]), ("Coder·3", AGENT["coder3"])]
+    PLANNER = ("Planner·1", AGENT["planner"])
+
+    def __init__(self, svg: SVG):
+        self.svg = svg
+        self.blocks = []  # (box, label, t_plan, t_fill, coder)
+        svg.defs.append(
+            '<pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
+            '<rect width="7" height="7" fill="rgba(77,225,255,0.035)"/><line x1="0" y1="0" x2="0" y2="7" stroke="rgba(77,225,255,0.09)" stroke-width="2"/></pattern>'
+        )
+
+    def start(self) -> int:
+        return len(self.svg.parts)
+
+    def end(self, idx: int, box, label: str) -> None:
+        i = len(self.blocks)
+        t_plan = self.PLAN0 + i * self.PLAN_STEP
+        t_fill = self.FILL0 + i * self.FILL_STEP
+        x, y, w, h = box
+        cid = f"bk{i}"
+        self.svg.defs.append(
+            f'<clipPath id="{cid}"><rect x="{x - 4:.1f}" y="{y - 4:.1f}" width="0" height="{h + 8:.1f}">'
+            f'<animate attributeName="width" from="0" to="{w + 8 + self.SLACK:.1f}" begin="{t_fill:.2f}s" dur="{self.WRITE}s" fill="freeze" '
+            f'calcMode="spline" keyTimes="0;1" keySplines=".4 0 .2 1"/></rect></clipPath>'
+        )
+        inner = "".join(self.svg.parts[idx:])
+        self.svg.parts[idx:] = [f'<g clip-path="url(#{cid})">{inner}</g>']
+        self.blocks.append((box, label, t_plan, t_fill, self.CODERS[i % 3]))
+
+    @property
+    def done(self) -> float:
+        return self.FILL0 + len(self.blocks) * self.FILL_STEP + 0.6
+
+    def _text(self, *a, **k) -> str:
+        self.svg.text(*a, **k)
+        return self.svg.parts.pop()
+
+    def _cursor(self, name, color, stops, show, hide) -> None:
+        """stops: [(t, x, y)] — the cursor eases between them; visible show..hide."""
+        T = hide + 0.4
+        f = FACES["m500"]
+        self.svg.used["m500"].update(name)
+        stops = [(0, *stops[0][1:])] + stops + [(T, *stops[-1][1:])]
+        kt = ";".join(f"{t / T:.4f}" for t, _, _ in stops)
+        vals = ";".join(f"{x:.1f} {y:.1f}" for _, x, y in stops)
+        splines = ";".join([".16 1 .3 1"] * (len(stops) - 1))
+        lw = f.width(name, 10) + 12
+        self.svg.add(
+            f'<g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" '
+            f'keyTimes="0;{show / T:.4f};{(show + .2) / T:.4f};{hide / T:.4f};1" dur="{T:.2f}s" fill="freeze"/>'
+            f'<g><animateTransform attributeName="transform" type="translate" values="{vals}" keyTimes="{kt}" '
+            f'dur="{T:.2f}s" fill="freeze" calcMode="spline" keySplines="{splines}"/>'
+            f'<path d="M1.5 1.5 L16 9.2 L9.4 10.9 L6.2 17.6 Z" fill="{color}" stroke="#050507" stroke-width="1.4" stroke-linejoin="round"/>'
+            f'<rect x="14" y="16" width="{lw:.1f}" height="17" rx="3" fill="{color}"/>'
+            f'<text x="20" y="28" font-family="{f.key},{FALLBACK["m"]}" font-size="10" fill="#0a0a0a">{esc(name)}</text></g></g>'
+        )
+
+    def finish(self) -> None:
+        svg = self.svg
+        # wireframes: appear when planned, vanish once written
+        for (x, y, w, h), label, tp, tf, _ in self.blocks:
+            T = tf + self.WRITE + 0.3
+            kt = f"0;{tp / T:.4f};{(tp + .25) / T:.4f};{(tf + .1) / T:.4f};1"
+            lab = self._text(x, y - 4, label, "m400", 9.5, WIRE)
+            svg.add(
+                f'<g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="{kt}" dur="{T:.2f}s" fill="freeze"/>'
+                f'<rect x="{x - 4:.1f}" y="{y - 4:.1f}" width="{w + 8:.1f}" height="{h + 8:.1f}" fill="url(#hatch)" '
+                f'stroke="{WIRE_LINE}" stroke-width="1" stroke-dasharray="3 3" rx="2"/>{lab}</g>'
+            )
+        # planner sweeps the layout, coders hop to the blocks they write
+        name, color = self.PLANNER
+        stops = [(tp, x + w * 0.5, y + h * 0.4) for (x, y, w, h), _, tp, _, _ in self.blocks]
+        self._cursor(name, color, stops, show=0.15, hide=self.FILL0 - 0.1)
+        for ci, (cname, ccolor) in enumerate(self.CODERS):
+            mine = [b for i, b in enumerate(self.blocks) if i % 3 == ci]
+            stops = []
+            for (x, y, w, h), _, _, tf, _ in mine:
+                stops += [(tf - 0.3, x - 6, y + h * 0.5), (tf + self.WRITE, x + w, y + h * 0.5)]
+            self._cursor(f"{cname} write", ccolor, stops, show=self.FILL0 - 0.6, hide=self.done - 0.2)
+
+
+
 def build_hero() -> None:
-    H = 700
-    svg = SVG(W, H, "Madhu Siddharth — AI Engineer. Agentic workflows, end-to-end automation. I ship agents that do the work, then measure exactly where they break.")
+    svg = SVG(W, 700, "Madhu Siddharth — AI Engineer. Agentic workflows, end-to-end automation. I ship agents that do the work, then measure exactly where they break.")
     svg.css.append(
         "@keyframes blink{0%,50%{opacity:1}50.01%,100%{opacity:0}}.caret{animation:blink 1.1s steps(1) infinite}"
-                "@keyframes spin{to{transform:rotate(360deg)}}.spin{transform-box:fill-box;transform-origin:center;animation:spin 1s linear infinite}"
-        "@keyframes reveal{from{width:0}to{width:var(--w)}}"
+        "@keyframes spin{to{transform:rotate(360deg)}}.spin{transform-box:fill-box;transform-origin:center;animation:spin 1s linear infinite}"
     )
+    sw = Swarm(svg)
+
+    def block(box, label, draw):
+        i = sw.start()
+        draw()
+        sw.end(i, box, label)
 
     # chrome bar
     svg.add(f'<path d="M6 0.5H{W - 6}A5.5 5.5 0 0 1 {W - 0.5} 6V44H0.5V6A5.5 5.5 0 0 1 6 0.5Z" fill="{BG1}"/>')
@@ -457,24 +555,38 @@ def build_hero() -> None:
     svg.add(f'<path d="M73 22a6 6 0 1 1-1.8-4.3M71.5 15.5v3.2h-3.2" fill="none" stroke="{FAINT}" stroke-width="1.5" stroke-linecap="round"/>')
     svg.rect(92, 10, 330, 24, fill=BG0, stroke=LINE2)
     svg.runs(104, 26.5, [("agent://", "m400", RED_INK), ("madhusiddharth.dev/", "m400", INK)], size=12)
+    # build progress under the address bar
+    svg.add(f'<rect x="92" y="33" height="1.5" width="0" fill="{WIRE}"><animate attributeName="width" from="0" to="330" '
+            f'begin="0s" dur="{sw.FILL0 + 16 * sw.FILL_STEP + .6:.2f}s" fill="freeze"/>'
+            f'<animate attributeName="opacity" from="1" to="0" begin="{sw.FILL0 + 16 * sw.FILL_STEP + .8:.2f}s" dur=".4s" fill="freeze"/></rect>')
     rw = FACES["m400"].width("Replay build", 11.5) + 22
     svg.rect(W - PAD - rw + 12, 10, rw, 24, fill=PANEL, stroke=LINE2)
     svg.text(W - PAD - rw + 23, 26, "Replay build", "m400", 11.5, INK)
+    status_idx = len(svg.parts)  # status swaps are wrapped once the build length is known
     sx = W - PAD - rw - FACES["m400"].width("static render", 11.5) - 6
     svg.add(f'<circle cx="{sx - 10}" cy="22" r="3" fill="{RED}"/>')
     svg.text(sx, 26, "static render", "m400", 11.5, MUTED)
+    static_parts = svg.parts[status_idx:]
+    del svg.parts[status_idx:]
+    ox = W - PAD - rw - FACES["m400"].width("orchestrating 11 agents", 11.5) - 6
+    svg.add(f'<path class="spin" d="M{ox - 10} 17a5 5 0 1 1-5 5" fill="none" stroke="{WIRE}" stroke-width="1.5" stroke-linecap="round"/>')
+    svg.text(ox, 26, "orchestrating 11 agents", "m400", 11.5, MUTED)
+    busy_parts = svg.parts[status_idx:]
+    del svg.parts[status_idx:]
 
     # status line
     y = 80
-    svg.add(f'<circle cx="{PAD + 4}" cy="{y - 4}" r="3.5" fill="none" stroke="{OK}">{PING}</circle>')
-    svg.add(f'<circle cx="{PAD + 4}" cy="{y - 4}" r="3.5" fill="{OK}"/>')
-    svg.runs(PAD + 16, y, [("available for work ", "m400", MUTED), ("/ ", "m400", FAINT), ("chicago ", "m400", MUTED),
-                           (" gmt-6 ", "m400", INK), ("/ ", "m400", FAINT), ("building ", "m400", MUTED),
-                           ("tool router ladder", "m500", INK)], size=12)
+    def status():
+        svg.add(f'<circle cx="{PAD + 4}" cy="{y - 4}" r="3.5" fill="none" stroke="{OK}">{PING}</circle>')
+        svg.add(f'<circle cx="{PAD + 4}" cy="{y - 4}" r="3.5" fill="{OK}"/>')
+        svg.runs(PAD + 16, y, [("available for work ", "m400", MUTED), ("/ ", "m400", FAINT), ("chicago ", "m400", MUTED),
+                               (" gmt-6 ", "m400", INK), ("/ ", "m400", FAINT), ("building ", "m400", MUTED),
+                               ("tool router ladder", "m500", INK)], size=12)
+    block((PAD - 2, y - 13, 470, 18), "p.env", status)
 
     # playground window
     px, py, pw = PAD, 100, W - 2 * PAD
-    win_idx = len(svg.parts)  # the window rect is inserted here once its height is known
+    win_idx = len(svg.parts)
     svg.add(f'<path d="M{px + 3} {py + 0.5}H{px + pw - 3}V{py + 36}H{px + 0.5}V{py + 3}Z" fill="{PANEL}"/>')
     svg.line(px, py + 36, px + pw, py + 36, LINE2)
     svg.add(f'<rect x="{px + 14}" y="{py + 15}" width="7" height="7" fill="{RED}"/>')
@@ -494,100 +606,120 @@ def build_hero() -> None:
     cw = tx1 - cx - 20
     y = py + 66
     svg.text(lx, y, "system", "m400", 11, FAINT)
-    y = svg.para(cx, y, "Answer as Madhu. Ground every claim in the résumé, the project logs and the repos.", cw, "m400", 12, MUTED, lh=20)
-    y += 14
-    cxx = cx
-    for i, label in enumerate(["resume_kb.yaml", "13 projects", "2 roles", "4 certs"]):
-        if i == 0:
-            w = FACES["m500"].width("ctx ", 11) + FACES["m400"].width(label, 11) + 16
-            svg.rect(cxx, y, w, 22, fill=PANEL2, stroke=LINE2)
-            svg.runs(cxx + 8, y + 15, [("ctx ", "m500", INK), (label, "m400", MUTED)], size=11)
-        else:
-            w = chip(svg, cxx, y, label)
-        cxx += w + 6
+    sys_y = y
+    block((cx, y - 12, cw, 34), "msg.system",
+          lambda: svg.para(cx, sys_y, "Answer as Madhu. Ground every claim in the résumé, the project logs and the repos.", cw, "m400", 12, MUTED, lh=20))
+    y += 20 + 14
+    ctx_y = y
+    def ctx():
+        cxx = cx
+        for i, label in enumerate(["resume_kb.yaml", "13 projects", "2 roles", "4 certs"]):
+            if i == 0:
+                w = FACES["m500"].width("ctx ", 11) + FACES["m400"].width(label, 11) + 16
+                svg.rect(cxx, ctx_y, w, 22, fill=PANEL2, stroke=LINE2)
+                svg.runs(cxx + 8, ctx_y + 15, [("ctx ", "m500", INK), (label, "m400", MUTED)], size=11)
+            else:
+                w = chip(svg, cxx, ctx_y, label)
+            cxx += w + 6
+    block((cx, ctx_y, 340, 22), "ctx.retrieved", ctx)
     y += 22 + 16
     svg.line(tx0 + 1, y, tx1, y, LINE)
     y += 30
     svg.text(lx, y, "user", "m400", 11, FAINT)
-    svg.text(cx, y, "Who are you, and what do you ship?", "s500", 16, INK)
+    uy = y
+    block((cx, y - 14, 300, 19), "msg.user", lambda: svg.text(cx, uy, "Who are you, and what do you ship?", "s500", 16, INK))
     y += 18
     svg.line(tx0 + 1, y, tx1, y, LINE)
     y += 28
     svg.text(lx, y, "assistant", "m500", 11, INK)
     svg.add(f'<rect class="caret" x="{lx + FACES["m500"].width("assistant", 11) + 5}" y="{y - 9}" width="5" height="11" fill="{FAINT}"/>')
-    svg.text(cx, y, "Hello, I'm", "m400", 12, FAINT)
+    hy = y
+    block((cx, y - 11, 80, 14), "span.hello", lambda: svg.text(cx, hy, "Hello, I'm", "m400", 12, FAINT))
     y += 56
-    nw = svg.text(cx - 2, y, "Madhu Siddharth.", "s600", 56, HI, ls=-2.5)
-    svg.add(f'<rect class="caret" x="{cx + nw + 4}" y="{y - 42}" width="5" height="44" fill="{RED}"/>')
+    ny = y
+    nw = FACES["s600"].width("Madhu Siddharth.", 56) - 2.5 * 16
+    def name():
+        svg.text(cx - 2, ny, "Madhu Siddharth.", "s600", 56, HI, ls=-2.5)
+        svg.add(f'<rect class="caret" x="{cx + nw + 4}" y="{ny - 42}" width="5" height="44" fill="{RED}"/>')
+    block((cx - 2, y - 44, nw + 12, 52), "h1.name", name)
     y += 30
-    svg.add(f'<rect x="{cx}" y="{y - 8}" width="6" height="6" fill="{RED}"/>')
-    svg.text(cx + 14, y, "ai engineer · agentic workflows · end-to-end automation", "m400", 11.5, MUTED)
+    ry = y
+    def role():
+        svg.add(f'<rect x="{cx}" y="{ry - 8}" width="6" height="6" fill="{RED}"/>')
+        svg.text(cx + 14, ry, "ai engineer · agentic workflows · end-to-end automation", "m400", 11.5, MUTED)
+    block((cx, y - 11, 400, 14), "p.role", role)
     y += 34
-    w1 = svg.text(cx, y, "I ship ", "s400", 19, MUTED)
-    w2 = svg.text(cx + w1, y, "agents that do the work", "s400", 19, INK)
-    svg.add(f'<rect x="{cx + w1}" y="{y + 5}" height="1.5" fill="{RED}" width="{w2:.1f}" style="--w:{w2:.1f}px;animation:reveal 1.4s .6s cubic-bezier(.16,1,.3,1) both"/>')
-    svg.text(cx + w1 + w2, y, ", then measure exactly where", "s400", 19, MUTED)
-    svg.text(cx, y + 28, "they break.", "s400", 19, MUTED)
+    ty = y
+    def tagline():
+        w1 = svg.text(cx, ty, "I ship ", "s400", 19, MUTED)
+        w2 = svg.text(cx + w1, ty, "agents that do the work", "s400", 19, INK)
+        t = sw.FILL0 + len(sw.blocks) * sw.FILL_STEP + sw.WRITE
+        svg.add(f'<rect x="{cx + w1}" y="{ty + 5}" height="1.5" fill="{RED}" width="0"><animate attributeName="width" from="0" to="{w2:.1f}" '
+                f'begin="{t:.2f}s" dur="1.2s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines=".16 1 .3 1"/></rect>')
+        svg.text(cx + w1 + w2, ty, ", then measure exactly where", "s400", 19, MUTED)
+        svg.text(cx, ty + 28, "they break.", "s400", 19, MUTED)
+    block((cx, y - 17, cw + 8, 50), "p.tagline", tagline)
     # tool_calls
     y += 58
-    svg.text(cx, y, "tool_calls · 3", "m400", 11, FAINT)
-    y += 10
-    bx = cx
-    calls = [("get_resume", "()", True), ("connect", "(linkedin)", False), ("view_source", "(github)", False)]
-    box_x0 = bx
-    for fn, arg, go in calls:
-        w = FACES["m400"].width(fn + arg, 12.5) + 36
-        svg.rect(bx, y, w, 32, fill=RED if go else "none", stroke=None if go else LINE2)
-        svg.runs(bx + 11, y + 20.5, [(fn, "m400", HI if go else INK), (arg, "m400", "#ffd9d5" if go else MUTED)], size=12.5)
-        ax = bx + w - 17
-        svg.add(f'<path d="M{ax} {y + 20}l6-6M{ax + 1} {y + 14}h5v5" fill="none" stroke="{HI if go else MUTED}" stroke-width="1.4" stroke-linecap="round"/>')
-        bx += w + 6
-    thread_end = y + 32
-    # an agent's selection box around tool_calls (the Aligner placing it)
-    sel = AGENT["aligner"]
-    svg.add(
-        f'<g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.35;0.45;0.8;1" dur="9s" repeatCount="indefinite"/>'
-        f'<rect x="{box_x0 - 6}" y="{y - 6}" width="{bx - box_x0 + 6}" height="44" rx="2" fill="none" stroke="{sel}" stroke-width="1.2" stroke-dasharray="4 3"/>'
-        + "".join(f'<rect x="{xx - 2.5}" y="{yy - 2.5}" width="5" height="5" fill="{sel}"/>' for xx in (box_x0 - 6, bx) for yy in (y - 6, y + 38))
-        + "</g>"
-    )
+    cy0 = y
+    def calls():
+        svg.text(cx, cy0, "tool_calls · 3", "m400", 11, FAINT)
+        bx = cx
+        for fn, arg, go in [("get_resume", "()", True), ("connect", "(linkedin)", False), ("view_source", "(github)", False)]:
+            w = FACES["m400"].width(fn + arg, 12.5) + 36
+            svg.rect(bx, cy0 + 10, w, 32, fill=RED if go else "none", stroke=None if go else LINE2)
+            svg.runs(bx + 11, cy0 + 30.5, [(fn, "m400", HI if go else INK), (arg, "m400", "#ffd9d5" if go else MUTED)], size=12.5)
+            ax = bx + w - 17
+            svg.add(f'<path d="M{ax} {cy0 + 30}l6-6M{ax + 1} {cy0 + 24}h5v5" fill="none" stroke="{HI if go else MUTED}" stroke-width="1.4" stroke-linecap="round"/>')
+            bx += w + 6
+    block((cx, y - 11, 440, 53), "tool_calls", calls)
+    thread_end = y + 42
 
     # config aside
     ax, aw = tx1 + 18, cfg_w - 36
     y = py + 66
-    for k, v in (("model", "madhu-v2"), ("role", "AI Engineer")):
-        svg.text(ax, y, k, "m400", 11, FAINT)
-        svg.text(ax + aw, y, v, "m400", 12, INK, anchor="end")
-        y += 26
-    svg.text(ax, y, "temperature", "m400", 11, FAINT)
-    svg.text(ax + aw, y, "0.2", "m400", 12, INK, anchor="end")
-    svg.rect(ax + aw - 92, y - 5, 60, 2, fill=LINE2, rx=1)
-    svg.rect(ax + aw - 92, y - 5, 12, 2, fill=RED, rx=1)
-    y += 22
+    my0 = y
+    def model():
+        yy = my0
+        for k, v in (("model", "madhu-v2"), ("role", "AI Engineer")):
+            svg.text(ax, yy, k, "m400", 11, FAINT)
+            svg.text(ax + aw, yy, v, "m400", 12, INK, anchor="end")
+            yy += 26
+        svg.text(ax, yy, "temperature", "m400", 11, FAINT)
+        svg.text(ax + aw, yy, "0.2", "m400", 12, INK, anchor="end")
+        svg.rect(ax + aw - 92, yy - 5, 60, 2, fill=LINE2, rx=1)
+        svg.rect(ax + aw - 92, yy - 5, 12, 2, fill=RED, rx=1)
+    block((ax, y - 12, aw, 68), "cfg.model", model)
+    y += 52 + 22
     svg.line(tx1, y, px + pw, y, LINE)
     y += 28
-    svg.runs(ax, y, [("tools ", "m400", FAINT), (str(len(TOOLS)), "m500", INK)], size=11)
-    y += 10
-    for i, t in enumerate(TOOLS):
-        yy = y + i * 22
-        uri = tech_icon(t)
-        if uri:
-            svg.image(ax, yy + 5, 14, 14, uri, fit="meet")
-        svg.text(ax + 22, yy + 16, t, "s400", 13, INK)
-    y += len(TOOLS) * 22 + 14
+    ty0 = y
+    def tools():
+        svg.runs(ax, ty0, [("tools ", "m400", FAINT), (str(len(TOOLS)), "m500", INK)], size=11)
+        for i, t in enumerate(TOOLS):
+            yy = ty0 + 10 + i * 22
+            uri = tech_icon(t)
+            if uri:
+                svg.image(ax, yy + 5, 14, 14, uri, fit="meet")
+            svg.text(ax + 22, yy + 16, t, "s400", 13, INK)
+    block((ax, y - 11, aw, 10 + len(TOOLS) * 22 + 12), "cfg.tools", tools)
+    y += 10 + len(TOOLS) * 22 + 14
     svg.line(tx1, y, px + pw, y, LINE)
     y += 24
-    svg.text(ax, y, "this run", "m400", 11, FAINT)
+    ry0 = y
+    def run():
+        svg.text(ax, ry0, "this run", "m400", 11, FAINT)
+        yy = ry0 + 10
+        cwid = aw / 3
+        svg.rect(ax, yy, aw, 44, fill=BG0, stroke=LINE2)
+        for i, (k, v) in enumerate([("nodes", "63/63"), ("wall", "11.6s"), ("agents", "11")]):
+            xx = ax + i * cwid
+            if i:
+                svg.line(xx, yy, xx, yy + 44, LINE2)
+            svg.text(xx + 9, yy + 17, k, "m400", 10, FAINT)
+            svg.text(xx + 9, yy + 35, v, "m500", 13, INK)
+    block((ax, y - 11, aw, 65), "cfg.usage", run)
     y += 10
-    cols = [("nodes", "63/63"), ("wall", "11.6s"), ("agents", "11")]
-    cwid = aw / 3
-    svg.rect(ax, y, aw, 44, fill=BG0, stroke=LINE2)
-    for i, (k, v) in enumerate(cols):
-        xx = ax + i * cwid
-        if i:
-            svg.line(xx, y, xx, y + 44, LINE2)
-        svg.text(xx + 9, y + 17, k, "m400", 10, FAINT)
-        svg.text(xx + 9, y + 35, v, "m500", 13, INK)
     ph = max(thread_end, y + 44) + 22 - py
     svg.parts.insert(win_idx, f'<rect x="{px}" y="{py}" width="{pw}" height="{ph}" rx="3" fill="{BG1}" stroke="{LINE2}"/>')
     svg.line(tx1, py + 36, tx1, py + ph, LINE2)
@@ -601,15 +733,17 @@ def build_hero() -> None:
         x = PAD + i * mw
         if i:
             svg.line(x, my, x, my + mh, LINE2)
-        svg.text(x + 18, my + 22, "eval.metric", "m400", 10, FAINT)
-        svg.text(x + 18, my + 56, v, "m400", 27, HI, ls=-0.8)
-        svg.para(x + 18, my + 80, label, mw - 36, "s400", 12.5, MUTED, lh=18)
+        def metric(x=x, v=v, label=label):
+            svg.text(x + 18, my + 22, "eval.metric", "m400", 10, FAINT)
+            svg.text(x + 18, my + 56, v, "m400", 27, HI, ls=-0.8)
+            svg.para(x + 18, my + 80, label, mw - 36, "s400", 12.5, MUTED, lh=18)
+        block((x + 14, my + 10, mw - 28, mh - 20), "eval.metric", metric)
 
-    # swarm cursors
-    agent_cursor(svg, "Stylist·1", AGENT["stylist"], "M760 120 C 620 300, 520 420, 480 404 L 470 400", dur=9)
-    agent_cursor(svg, "Aligner place", AGENT["aligner"], "M820 640 C 700 560, 520 520, 470 470", dur=9, begin=3)
-    agent_cursor(svg, "Coder·3", AGENT["coder3"], "M120 660 C 140 610, 160 590, 190 584", dur=9, begin=6)
-
+    # chrome status: "orchestrating" while building, then "static render"
+    done = sw.done
+    svg.add(f'<g><set attributeName="opacity" to="0" begin="{done:.2f}s" fill="freeze"/>{"".join(busy_parts)}</g>')
+    svg.add(f'<g opacity="0"><set attributeName="opacity" to="1" begin="{done:.2f}s" fill="freeze"/>{"".join(static_parts)}</g>')
+    sw.finish()
     svg.frame(grid=False)
     svg.save("hero.svg")
 
@@ -788,22 +922,54 @@ def card_body(svg: SVG, p, x, y, w, max_lines=4, title_size=19) -> float:
     return y + 21
 
 
-def card_foot(svg: SVG, x, y, w) -> None:
-    svg.line(x - 18, y, x + w + 18, y, RULE)
-    svg.text(x, y + 26, "field report", "m400", 11.5, INK)
-    ax = x + FACES["m400"].width("field report", 11.5) + 9
-    svg.add(f'<path d="M{ax} {y + 22}h10M{ax + 6} {y + 18}l4 4-4 4" fill="none" stroke="{INK}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>')
-    svg.icon("github", x + w - 15, y + 14, 15, MUTED)
+HALF = W / 2   # a pair of cards fills one README row exactly; each half carries its own gutter
+GUT = 5
+FOOT_H = 44
+REPO_W = 58     # width of the GitHub half of a card's action bar (incl. gutter)
+FADE = ('<linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.55" stop-color="#0e0e0e" stop-opacity="0"/>'
+        '<stop offset="1" stop-color="#0e0e0e" stop-opacity="0.6"/></linearGradient>')
+GLOW_CYCLE = 21  # seconds; the cards "hover" one after another, 3 s each
 
 
-def build_lead_card(p) -> None:
+def hover_glow(svg: SVG, slot: int) -> str:
+    """The site's card hover, played on a timer: the thumbnail goes from
+    grayscale(1) brightness(.62) to grayscale(.15) brightness(.9) and the
+    border lights up. GitHub shows SVGs as <img>, which never sees the
+    pointer, so this is the closest a README can get. Returns the filter id."""
+    t0 = (slot * 3) / GLOW_CYCLE
+    on, off = t0 + 0.6 / GLOW_CYCLE, t0 + 2.6 / GLOW_CYCLE
+    end = t0 + 3.2 / GLOW_CYCLE
+    kt = f"0;{t0:.4f};{on:.4f};{off:.4f};{end:.4f};1"
+    anim = lambda attr, a, b: (f'<animate attributeName="{attr}" values="{a};{a};{b};{b};{a};{a}" keyTimes="{kt}" '
+                               f'dur="{GLOW_CYCLE}s" repeatCount="indefinite" calcMode="spline" '
+                               f'keySplines="0 0 1 1;.16 1 .3 1;0 0 1 1;.16 1 .3 1;0 0 1 1"/>')
+    svg.defs.append(
+        '<filter id="glow" color-interpolation-filters="sRGB">'
+        f'<feColorMatrix type="saturate" values="0">{anim("values", 0, 0.85)}</feColorMatrix>'
+        '<feComponentTransfer>'
+        + "".join(f'<feFunc{c} type="linear" slope="0.64">{anim("slope", 0.64, 0.92)}</feFunc{c}>' for c in "RGB")
+        + '</feComponentTransfer></filter>'
+    )
+    return "glow"
+
+
+def glow_border(svg: SVG, x, y, w, h, slot: int) -> None:
+    t0 = (slot * 3) / GLOW_CYCLE
+    kt = f"0;{t0:.4f};{t0 + 0.6 / GLOW_CYCLE:.4f};{t0 + 2.6 / GLOW_CYCLE:.4f};{t0 + 3.2 / GLOW_CYCLE:.4f};1"
+    svg.add(f'<rect x="{x + 0.5}" y="{y + 0.5}" width="{w - 1}" height="{h - 1}" rx="6" fill="none" stroke="{LINE2}">'
+            f'<animate attributeName="stroke" values="{LINE2};{LINE2};#4a4a4a;#4a4a4a;{LINE2};{LINE2}" keyTimes="{kt}" '
+            f'dur="{GLOW_CYCLE}s" repeatCount="indefinite"/></rect>')
+
+
+def build_lead_card(p, slot=0) -> None:
     h = 430
     svg = SVG(W, h, f"{p['name']} — {p['summary']}")
     lw = 440
     iw, ih = lw - 40, round((lw - 40) / 1.833)
     ix, iy = 20, 20
+    fid = hover_glow(svg, slot)
     svg.add(f'<clipPath id="c"><rect x="{ix}" y="{iy}" width="{iw}" height="{ih}" rx="3"/></clipPath>')
-    svg.image(ix, iy, iw, ih, thumb(p["thumb"], iw, ih), 'clip-path="url(#c)"')
+    svg.image(ix, iy, iw, ih, thumb(p["thumb"], iw, ih), f'clip-path="url(#c)" filter="url(#{fid})"')
     svg.rect(ix, iy, iw, ih, stroke=LINE2)
     y = iy + ih + 34
     svg.text(ix, y, "results", "m400", 11, FAINT)
@@ -816,26 +982,51 @@ def build_lead_card(p) -> None:
     svg.line(lw, 0, lw, h, RULE)
     x, w = lw + 26, W - lw - 52
     card_body(svg, p, x, 38, w, max_lines=7, title_size=24)
-    card_foot(svg, x, h - 46, w)
     svg.parts.insert(0, f'<rect width="{W}" height="{h}" rx="6" fill="{BG1}"/>')
-    svg.add(f'<rect x="0.5" y="0.5" width="{W - 1}" height="{h - 1}" rx="6" fill="none" stroke="{LINE2}"/>')
+    glow_border(svg, 0, 0, W, h, slot)
     svg.save(f"card-{p['slug']}.svg")
 
 
-def build_card(p) -> None:
-    w, h, th = 445, 486, 210
-    svg = SVG(w, h, f"{p['name']} — {p['summary']}")
-    svg.add(f'<clipPath id="c"><path d="M6 0H{w - 6}A6 6 0 0 1 {w} 6V{th}H0V6A6 6 0 0 1 6 0Z"/></clipPath>')
-    svg.image(0, 0, w, th, thumb(p["thumb"], w, th), 'clip-path="url(#c)"')
-    svg.defs.append('<linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.55" stop-color="#0e0e0e" stop-opacity="0"/><stop offset="1" stop-color="#0e0e0e" stop-opacity="0.6"/></linearGradient>')
-    svg.rect(0, 0, w, th, fill="url(#fade)", rx=0, extra='clip-path="url(#c)"')
-    svg.line(0, th, w, th, RULE)
-    x, iw = 20, w - 40
-    card_body(svg, p, x, th + 32, iw, max_lines=4)
-    card_foot(svg, x, h - 48, iw)
-    svg.parts.insert(0, f'<rect width="{w}" height="{h}" rx="6" fill="{BG1}"/>')
-    svg.add(f'<rect x="0.5" y="0.5" width="{w - 1}" height="{h - 1}" rx="6" fill="none" stroke="{LINE2}"/>')
+def build_card(p, side: str, slot: int) -> None:
+    """One half of a card pair. `side` puts the gutter between the two cards."""
+    w, h, th = HALF - GUT, 446, 210
+    ox = 0 if side == "L" else GUT
+    svg = SVG(HALF, h, f"{p['name']} — {p['summary']}")
+    fid = hover_glow(svg, slot)
+    svg.add(f'<clipPath id="c"><path d="M{ox + 6} 0H{ox + w - 6}A6 6 0 0 1 {ox + w} 6V{th}H{ox}V6A6 6 0 0 1 {ox + 6} 0Z"/></clipPath>')
+    svg.image(ox, 0, w, th, thumb(p["thumb"], int(w), th), f'clip-path="url(#c)" filter="url(#{fid})"')
+    svg.defs.append(FADE)
+    svg.rect(ox, 0, w, th, fill="url(#fade)", rx=0, extra='clip-path="url(#c)"')
+    svg.line(ox, th, ox + w, th, RULE)
+    card_body(svg, p, ox + 20, th + 32, w - 40, max_lines=4)
+    svg.parts.insert(0, f'<rect x="{ox}" width="{w}" height="{h}" rx="6" fill="{BG1}"/>')
+    glow_border(svg, ox, 0, w, h, slot)
     svg.save(f"card-{p['slug']}.svg")
+
+
+def build_card_actions(p, side: str) -> None:
+    """The card footer as two links: field report (site) and source (GitHub).
+    side: "L"/"R" for a half-width card, "F" for the full-width lead card."""
+    total = W if side == "F" else HALF
+    gl = GUT if side == "R" else 0          # gutter on the left of the report half
+    gr = GUT if side == "L" else 0          # gutter on the right of the repo half
+    repo_w = REPO_W if side == "L" else REPO_W - GUT
+    report_w = total - repo_w
+    # report half
+    svg = SVG(report_w, FOOT_H, f"Open the {p['name']} field report")
+    bw = report_w - gl - 6
+    svg.rect(gl + 0.5, 0.5, bw - 1, FOOT_H - 1, fill=BG1, stroke=LINE2, rx=4)
+    x = gl + 18
+    x += svg.text(x, 27, "field report", "m400", 12, INK) + 9
+    svg.add(f'<path d="M{x} 22.5h11M{x + 7} 18l4.5 4.5-4.5 4.5" fill="none" stroke="{INK}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>')
+    svg.text(gl + bw - 18, 27, "madhusiddharths.com", "m400", 11, FAINT, anchor="end")
+    svg.save(f"act-{p['slug']}-report.svg")
+    # repo half
+    svg = SVG(repo_w, FOOT_H, f"{p['name']} source on GitHub")
+    bw = repo_w - gr
+    svg.rect(0.5, 0.5, bw - 1, FOOT_H - 1, fill=BG1, stroke=LINE2, rx=4)
+    svg.icon("github", (bw - 17) / 2, (FOOT_H - 17) / 2, 17, INK)
+    svg.save(f"act-{p['slug']}-repo.svg")
 
 
 def build_ledger_row(idx, name, domain, kind, slug) -> None:
@@ -994,9 +1185,12 @@ def main() -> None:
     build_about()
     build_head("head-work.svg", "02", "work", "Architectural showcase", "Flagship Deployments",
                "End-to-end systems spanning data engineering, applied machine learning, and agentic AI. Open one for the full field report.", 236)
-    build_lead_card(PROJECTS[0])
-    for p in PROJECTS[1:]:
-        build_card(p)
+    build_lead_card(PROJECTS[0], slot=0)
+    build_card_actions(PROJECTS[0], "F")
+    for i, p in enumerate(PROJECTS[1:]):
+        side = "LR"[i % 2]
+        build_card(p, side, slot=i + 1)
+        build_card_actions(p, side)
     for idx, name, domain, kind, _url, slug in MORE:
         build_ledger_row(idx, name, domain, kind, slug)
     build_index_button()
